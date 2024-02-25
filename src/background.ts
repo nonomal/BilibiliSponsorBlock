@@ -125,7 +125,8 @@ chrome.runtime.onInstalled.addListener(function () {
 
     // Only do this once the old version understands how to clean itself up
     if (!isFirefoxOrSafari() && chrome.runtime.getManifest().version !== "5.4.13") {
-        injectUpdatedScripts().catch(logWarn);
+        // TODO: Add logging back on error
+        injectUpdatedScripts().catch();
     }
 });
 
@@ -247,14 +248,14 @@ async function setupOffscreenDocument() {
     const offscreenUrl = chrome.runtime.getURL('offscreen.html');
 
     const existingContexts = await chrome.runtime.getContexts({
-        contextTypes: ['OFFSCREEN_DOCUMENT' as chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
+        contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
         documentUrls: [offscreenUrl]
-      });
-      if (existingContexts.length > 0) return;
+    });
+    if (existingContexts.length > 0) return;
 
     await chrome.offscreen.createDocument({
         url: chrome.runtime.getURL(offscreenUrl),
-        reasons: [],
-        justification: 'testing the offscreen API',
+        reasons: [chrome.offscreen.Reason.WORKERS, chrome.offscreen.Reason.LOCAL_STORAGE],
+        justification: 'Worker for Bilibili Sponsor Block',
     });
 }
