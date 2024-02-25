@@ -28,7 +28,6 @@ utils.wait(() => Config.isReady()).then(function() {
 
 setupBackgroundRequestProxy();
 setupTabUpdates(Config);
-setupOffscreenDocument();
 
 chrome.runtime.onMessage.addListener(function (request, sender, callback) {
     switch(request.message) {
@@ -242,20 +241,4 @@ async function asyncRequestToServer(type: string, address: string, data = {}) {
     const serverAddress = Config.config.testingServer ? CompileConfig.testingServerAddress : Config.config.serverAddress;
 
     return await (sendRealRequestToCustomServer(type, serverAddress + address, data));
-}
-
-async function setupOffscreenDocument() {
-    const offscreenUrl = chrome.runtime.getURL('offscreen.html');
-
-    const existingContexts = await chrome.runtime.getContexts({
-        contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
-        documentUrls: [offscreenUrl]
-    });
-    if (existingContexts.length > 0) return;
-
-    await chrome.offscreen.createDocument({
-        url: chrome.runtime.getURL(offscreenUrl),
-        reasons: [chrome.offscreen.Reason.WORKERS, chrome.offscreen.Reason.LOCAL_STORAGE],
-        justification: 'Worker for Bilibili Sponsor Block',
-    });
 }

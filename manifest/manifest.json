@@ -85,8 +85,7 @@
     ],
     "permissions": [
         "storage",
-        "scripting",
-        "offscreen"
+        "scripting"
     ],
     "host_permissions": [
         "https://*.bilibili.com/*"
