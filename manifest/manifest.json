@@ -85,6 +85,7 @@
     ],
     "permissions": [
         "storage",
+        "scripting",
         "offscreen"
     ],
     "host_permissions": [
