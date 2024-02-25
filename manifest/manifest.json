@@ -90,9 +90,6 @@
     "host_permissions": [
         "https://*.bilibili.com/*"
     ],
-    "optional_host_permissions": [
-        "*://*/*"
-    ],
     "action": {
         "default_title": "SponsorBlock",
         "default_popup": "popup.html",
@@ -139,10 +136,6 @@
                 "size": 1024
             }
         ]
-    },
-    "background": {
-        "service_worker": "./js/background.js",
-        "type": "module"
     },
     "icons": {
         "16": "icons/IconSponsorBlocker16px.png",

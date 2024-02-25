@@ -8,13 +8,15 @@
       "strict_min_version": "113.0"
     }
   },
-  "background": {
-    "persistent": false
-  },
-  "permissions": [
-    "scripting"
+  "optional_permissions": [
+    "*://*/*"
   ],
-  "browser_action": {
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "action": {
     "default_area": "navbar"
   }
 }

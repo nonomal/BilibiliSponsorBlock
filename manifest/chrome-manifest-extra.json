@@ -2,5 +2,12 @@
   "optional_permissions": [
     "declarativeContent",
     "webNavigation"
-  ]
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
+  "background": {
+    "service_worker": "./js/background.js",
+    "type": "module"
+  }
 }
