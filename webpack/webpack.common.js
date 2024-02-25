@@ -63,8 +63,8 @@ module.exports = env => {
         currentWatching = null;
 
         /**
-         * 
-         * @param {webpack.Compiler} compiler 
+         *
+         * @param {webpack.Compiler} compiler
          */
         apply(compiler) {
             compiler.hooks.beforeCompile.tapAsync({ name: 'DocumentScriptCompiler' }, (compiler, callback) => {
@@ -95,6 +95,7 @@ module.exports = env => {
         entry: {
             popup: path.join(__dirname, srcDir + 'popup.ts'),
             background: path.join(__dirname, srcDir + 'background.ts'),
+            offscreen: path.join(__dirname, srcDir + 'offscreen.ts'),
             content: path.join(__dirname, srcDir + 'content.ts'),
             options: path.join(__dirname, srcDir + 'options.ts'),
             help: path.join(__dirname, srcDir + 'help.ts'),
@@ -143,7 +144,7 @@ module.exports = env => {
                         context: './public',
                         filter: async (path) => {
                             if (path.match(/(\/|\\)_locales(\/|\\).+/)) {
-                                if (env.browser.toLowerCase() === "edge" 
+                                if (env.browser.toLowerCase() === "edge"
                                         && !edgeLanguages.includes(path.match(/(?<=\/_locales\/)[^/]+(?=\/[^/]+$)/)[0])) {
                                     return false;
                                 }
@@ -170,7 +171,7 @@ module.exports = env => {
                                         parsed.Description.message = parsed.Description.message.slice(0, 77) + "...";
                                     }
                                 }
-                
+
                                 return Buffer.from(JSON.stringify(parsed));
                             }
 
