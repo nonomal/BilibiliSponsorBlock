@@ -6,11 +6,6 @@ import "content-scripts-register-polyfill";
 import { sendRealRequestToCustomServer, setupBackgroundRequestProxy } from "../maze-utils/src/background-request-proxy";
 import { setupTabUpdates } from "../maze-utils/src/tab-updates";
 import { generateUserID } from "../maze-utils/src/setup";
-
-// Make the config public for debugging purposes
-
-window.SB = Config;
-
 import Utils from "./utils";
 import { isFirefoxOrSafari } from "../maze-utils/src";
 import { injectUpdatedScripts } from "../maze-utils/src/cleanup";
@@ -33,6 +28,7 @@ utils.wait(() => Config.isReady()).then(function() {
 
 setupBackgroundRequestProxy();
 setupTabUpdates(Config);
+setupOffscreenDocument();
 
 chrome.runtime.onMessage.addListener(function (request, sender, callback) {
     switch(request.message) {
@@ -245,4 +241,20 @@ async function asyncRequestToServer(type: string, address: string, data = {}) {
     const serverAddress = Config.config.testingServer ? CompileConfig.testingServerAddress : Config.config.serverAddress;
 
     return await (sendRealRequestToCustomServer(type, serverAddress + address, data));
+}
+
+async function setupOffscreenDocument() {
+    const offscreenUrl = chrome.runtime.getURL('offscreen.html');
+
+    const existingContexts = await chrome.runtime.getContexts({
+        contextTypes: ['OFFSCREEN_DOCUMENT' as chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
+        documentUrls: [offscreenUrl]
+      });
+      if (existingContexts.length > 0) return;
+
+    await chrome.offscreen.createDocument({
+        url: chrome.runtime.getURL(offscreenUrl),
+        reasons: [],
+        justification: 'testing the offscreen API',
+    });
 }
