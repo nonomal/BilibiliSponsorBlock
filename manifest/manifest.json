@@ -94,7 +94,7 @@
     "optional_host_permissions": [
         "*://*/*"
     ],
-    "browser_action": {
+    "action": {
         "default_title": "SponsorBlock",
         "default_popup": "popup.html",
         "default_icon": {
