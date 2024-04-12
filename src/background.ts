@@ -205,7 +205,7 @@ async function submitVote(type: number, UUID: string, category: string) {
 
     try {
         const response = await asyncRequestToServer("POST", "/api/voteOnSponsorTime?UUID=" + UUID + "&userID=" + userID + typeSection);
-
+    
         if (response.ok) {
             return {
                 successType: 1,

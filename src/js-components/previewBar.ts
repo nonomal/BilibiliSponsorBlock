@@ -7,9 +7,8 @@ https://github.com/videosegments/videosegments/commits/f1e111bdfe231947800c6efdd
 
 import Config from "../config";
 import { ChapterVote } from "../render/ChapterVote";
-import { ActionType, Category, SegmentContainer, SponsorHideType, SponsorSourceType, SponsorTime } from "../types";
+import { ActionType, Category, SponsorHideType, SponsorSourceType, SponsorTime } from "../types";
 import { DEFAULT_CATEGORY, shortCategoryName } from "../utils/categoryUtils";
-import { findValidElement } from "../../maze-utils/src/dom";
 
 const TOOLTIP_VISIBLE_CLASS = 'sponsorCategoryTooltipVisible';
 
@@ -25,13 +24,11 @@ export interface PreviewBarSegment {
     selectedSegment?: boolean;
 }
 
-interface ChapterGroup extends SegmentContainer {
-    originalDuration: number;
-    actionType: ActionType;
-}
-
 class PreviewBar {
+    // main progress bar
     container: HTMLUListElement;
+    // small progress bar on the bottom of <video />, shown only when not hovering the video
+    shadowContainer: HTMLUListElement;
     categoryTooltip?: HTMLDivElement;
     categoryTooltipContainer?: HTMLElement;
     lastSmallestSegment: Record<string, {
@@ -40,34 +37,25 @@ class PreviewBar {
     }> = {};
 
     parent: HTMLElement;
-    progressBar: HTMLElement;
+    shadowParent: HTMLElement;
 
     segments: PreviewBarSegment[] = [];
     existingChapters: PreviewBarSegment[] = [];
     videoDuration = 0;
-    lastChapterUpdate = 0;
 
-    // For chapter bar
-    hoveredSection: HTMLElement;
-    customChaptersBar: HTMLElement;
-    chaptersBarSegments: PreviewBarSegment[];
     chapterVote: ChapterVote;
-    originalChapterBar: HTMLElement;
-    originalChapterBarBlocks: NodeListOf<HTMLElement>;
-    chapterMargin: number;
-    lastRenderedSegments: PreviewBarSegment[];
-    unfilteredChapterGroups: ChapterGroup[];
-    chapterGroups: ChapterGroup[];
 
-    constructor(parent: HTMLElement, chapterVote: ChapterVote, test=false) {
+    constructor(parent: HTMLElement, shadowParent: HTMLElement, chapterVote: ChapterVote, test=false) {
         if (test) return;
         this.container = document.createElement('ul');
         this.container.id = 'previewbar';
+        this.shadowContainer = document.createElement('ul');
+        this.shadowContainer.id = 'shadowPreviewbar';
 
         this.parent = parent;
+        this.shadowParent = shadowParent;
         this.chapterVote = chapterVote;
 
-        this.updateProgressBarElement();
         this.createElement();
         this.setupHoverText();
     }
@@ -137,32 +125,27 @@ class PreviewBar {
      * Insert the container of the preview bar into DOM,
      * as the first child node of parent
      */
-    createElement(parent?: HTMLElement): void {
+    createElement(parent?: HTMLElement, shadowParent?: HTMLElement): void {
         if (parent) this.parent = parent;
         this.parent.prepend(this.container);
+        if (shadowParent) this.shadowParent = shadowParent;
+        this.shadowParent?.prepend(this.shadowContainer);
     }
 
     clear(): void {
         while (this.container.firstChild) {
             this.container.removeChild(this.container.firstChild);
         }
+        while (this.shadowContainer?.firstChild) {
+            this.shadowContainer.removeChild(this.shadowContainer.firstChild);
+        }
 
-        if (this.customChaptersBar) this.customChaptersBar.style.display = "none";
-        this.originalChapterBar?.style?.removeProperty("display");
         this.chapterVote?.setVisibility(false);
-
-        document.querySelectorAll(`.sponsorBlockChapterBar`).forEach((e) => {
-            if (e !== this.customChaptersBar) {
-                e.remove();
-            }
-        });
     }
 
     set(segments: PreviewBarSegment[], videoDuration: number): void {
         this.segments = segments ?? [];
         this.videoDuration = videoDuration ?? 0;
-
-        this.updateProgressBarElement();
 
         // TODO: find an api to varify video duration
         // Sometimes video duration is inaccurate, pull from accessibility info
@@ -174,11 +157,6 @@ class PreviewBar {
         this.update();
     }
 
-    private updateProgressBarElement(): void {
-        const allProgressBars = document.querySelectorAll('.bpx-player-progress-schedule-wrap') as NodeListOf<HTMLElement>;
-        this.progressBar = findValidElement(allProgressBars) ?? allProgressBars?.[0];
-    }
-
     private update(): void {
         this.clear();
 
@@ -188,7 +166,9 @@ class PreviewBar {
         });
         for (const segment of sortedSegments) {
             const bar = this.createBar(segment);
+            const shadowBar = bar.cloneNode(true) as HTMLLIElement;
             this.container.appendChild(bar);
+            this.shadowContainer?.appendChild(shadowBar);
         }
     }
 
@@ -325,6 +305,7 @@ class PreviewBar {
 
     remove(): void {
         this.container.remove();
+        this.shadowContainer.remove();
 
         if (this.categoryTooltip) {
             this.categoryTooltip.remove();
@@ -365,42 +346,6 @@ class PreviewBar {
      * Decimal to time or time to decimal
      */
     decimalTimeConverter(value: number, isTime: boolean): number {
-        if (this.originalChapterBarBlocks?.length > 1 && this.existingChapters.length === this.originalChapterBarBlocks?.length) {
-            // Parent element to still work when display: none
-            const totalPixels = this.originalChapterBar.parentElement.clientWidth;
-            let pixelOffset = 0;
-            let lastCheckedChapter = -1;
-            for (let i = 0; i < this.originalChapterBarBlocks.length; i++) {
-                const chapterElement = this.originalChapterBarBlocks[i];
-                const widthPixels = parseFloat(chapterElement.style.width.replace("px", ""));
-
-                const marginPixels = chapterElement.style.marginRight ? parseFloat(chapterElement.style.marginRight.replace("px", "")) : 0;
-                if ((isTime && value >= this.existingChapters[i].segment[1])
-                        || (!isTime && value >= (pixelOffset + widthPixels + marginPixels) / totalPixels)) {
-                    pixelOffset += widthPixels + marginPixels;
-                    lastCheckedChapter = i;
-                } else {
-                    break;
-                }
-            }
-
-            // The next chapter is the one we are currently inside of
-            const latestChapter = this.existingChapters[lastCheckedChapter + 1];
-            if (latestChapter) {
-                const latestWidth = parseFloat(this.originalChapterBarBlocks[lastCheckedChapter + 1].style.width.replace("px", ""));
-                const latestChapterDuration = latestChapter.segment[1] - latestChapter.segment[0];
-
-                if (isTime) {
-                    const percentageInCurrentChapter = (value - latestChapter.segment[0]) / latestChapterDuration;
-                    const sizeOfCurrentChapter = latestWidth / totalPixels;
-                    return Math.min(1, ((pixelOffset / totalPixels) + (percentageInCurrentChapter * sizeOfCurrentChapter)));
-                } else {
-                    const percentageInCurrentChapter = (value * totalPixels - pixelOffset) / latestWidth;
-                    return Math.max(0, latestChapter.segment[0] + (percentageInCurrentChapter * latestChapterDuration));
-                }
-            }
-        }
-
         if (isTime) {
             return Math.min(1, value / this.videoDuration);
         } else {

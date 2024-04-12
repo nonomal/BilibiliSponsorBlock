@@ -248,7 +248,13 @@ function messageListener(request: Message, sender: unknown, sendResponse: (respo
             break;
         case "refreshSegments":
             // update video on refresh if videoID invalid
-            if (!getVideoID()) checkVideoIDChange();
+            if (!getVideoID()) {
+                checkVideoIDChange()
+            }
+
+            // if popup rescieves no response, or the videoID is invalid,
+            // it will assume the page is not a video page and stop the refresh animation
+            sendResponse({ hasVideo: getVideoID() != null });
             // fetch segments
             sponsorsLookup(false);
 
@@ -424,21 +430,20 @@ function createPreviewBar(): void {
     const progressElementOptions = [{
         // For Desktop Bilibili
         selector: ".bpx-player-progress-schedule-wrap",
+        shadowSelector: ".bpx-player-shadow-progress-area",
         isVisibleCheck: true
-        }
-    ];
+    }];
 
     for (const option of progressElementOptions) {
         const allElements = document.querySelectorAll(option.selector) as NodeListOf<HTMLElement>;
-        const el = option.isVisibleCheck ? findValidElement(allElements) : allElements[0];
+        const parent = option.isVisibleCheck ? findValidElement(allElements) : allElements[0];
+        const allshadowSelectorElements = document.querySelectorAll(option.shadowSelector) as NodeListOf<HTMLElement>;
+        const shadowParent = allshadowSelectorElements[0];
 
-        if (el) {
-            console.log("createPreviewBar parent node: ", el)
+        if (parent) {
             const chapterVote = new ChapterVote(voteAsync);
-            previewBar = new PreviewBar(el, chapterVote);
-
+            previewBar = new PreviewBar(parent, shadowParent, chapterVote);
             updatePreviewBar();
-
             break;
         }
     }
@@ -1000,7 +1005,6 @@ async function sponsorsLookup(keepOldSubmissions = true) {
                         source: SponsorSourceType.Server
                     }))
                     ?.sort((a, b) => a.segment[0] - b.segment[0]);
-        console.log("sponsor lookup", receivedSegments)
         if (receivedSegments && receivedSegments.length) {
             sponsorDataFound = true;
 
@@ -1201,8 +1205,6 @@ function updatePreviewBar(): void {
     const hashParams = getHashParams();
     const requiredSegment = hashParams?.requiredSegment as SegmentUUID || undefined;
     const previewBarSegments: PreviewBarSegment[] = [];
-    //TODO: remove temp console output
-    console.log("update preview bar, sponsorTimes:", sponsorTimes)
     if (sponsorTimes) {
         sponsorTimes.forEach((segment) => {
             if (segment.hidden !== SponsorHideType.Visible) return;
@@ -2138,7 +2140,8 @@ async function sendSubmitMessage(): Promise<boolean> {
     if (!previewedSegment
             && !sponsorTimesSubmitting.every((segment) =>
                 [ActionType.Full, ActionType.Poi].includes(segment.actionType)
-                    || segment.segment[1] >= getVideo()?.duration)) {
+                    || segment.segment[1] >= getVideo()?.duration
+                    || segment.segment[0] === 0)) {
         alert(`${chrome.i18n.getMessage("previewSegmentRequired")} ${keybindToString(Config.config.previewKeybind)}`);
         return false;
     }
