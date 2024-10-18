@@ -214,9 +214,13 @@ export class DescriptionPortPill {
     private async updateSegments() {
         const response = await updatePortedSegments(this.bvID);
         if (!response?.ok) {
-            console.error(response.responseText);
-            showMessage(chrome.i18n.getMessage("refreshFailed") + response.responseText, "error");
-            return;
+            if (response.status === 429) {
+                showMessage(response.responseText, "info");
+            } else {
+                console.error(response.responseText);
+                showMessage(chrome.i18n.getMessage("refreshFailed") + response.responseText, "error");
+                return;
+            }
         }
         this.sponsorsLookup(true, true, true);
         showMessage(chrome.i18n.getMessage("refreshSuccess"), "success");
